@@ -1,0 +1,589 @@
+:root {
+    --primary-cyan: #00ffff;
+    --secondary-magenta: #ff00ff;
+    --accent-yellow: #ffff00;
+    --bg-dark: #0a0a0f;
+    --bg-darker: #050508;
+    --terminal-green: #00ff41;
+    --error-red: #ff0055;
+    --text-primary: #e0e0ff;
+    --text-dim: #8888aa;
+    --glow-cyan: 0 0 10px var(--primary-cyan), 0 0 20px var(--primary-cyan);
+    --glow-magenta: 0 0 10px var(--secondary-magenta), 0 0 20px var(--secondary-magenta);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Azeret Mono', monospace;
+    background: var(--bg-darker);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    position: relative;
+}
+
+/* CRT & Scanline Effects */
+.scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    animation: scanlineMove 8s linear infinite;
+}
+
+.crt-effect {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+    animation: flicker 0.15s infinite;
+}
+
+@keyframes scanlineMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(10px); }
+}
+
+@keyframes flicker {
+    0%, 100% { opacity: 0.97; }
+    50% { opacity: 1; }
+}
+
+/* Terminal Container */
+.terminal-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(1200px, 95vw);
+    height: min(800px, 90vh);
+    background: linear-gradient(135deg, rgba(10, 10, 15, 0.95), rgba(20, 10, 30, 0.95));
+    border: 2px solid var(--primary-cyan);
+    box-shadow:
+        0 0 30px rgba(0, 255, 255, 0.3),
+        inset 0 0 60px rgba(0, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    animation: terminalBoot 0.5s ease-out;
+    backdrop-filter: blur(10px);
+}
+
+@keyframes terminalBoot {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Header */
+.terminal-header {
+    padding: 1rem 1.5rem;
+    background: rgba(0, 255, 255, 0.05);
+    border-bottom: 1px solid var(--primary-cyan);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    background: var(--terminal-green);
+    border-radius: 50%;
+    box-shadow: var(--glow-cyan);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.system-name {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: var(--primary-cyan);
+    text-shadow: var(--glow-cyan);
+    letter-spacing: 2px;
+}
+
+.version {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-yellow);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-yellow);
+}
+
+.status-text {
+    font-size: 0.85rem;
+    color: var(--accent-yellow);
+    text-shadow: 0 0 5px var(--accent-yellow);
+}
+
+/* Terminal Body */
+.terminal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Boot Sequence */
+.boot-sequence {
+    padding: 2rem;
+    animation: fadeOut 1s ease-out 2s forwards;
+}
+
+.boot-line {
+    color: var(--primary-cyan);
+    margin: 0.5rem 0;
+    opacity: 0;
+    animation: bootLineAppear 0.3s ease-out forwards;
+    text-shadow: var(--glow-cyan);
+}
+
+.boot-success {
+    color: var(--terminal-green);
+    text-shadow: 0 0 10px var(--terminal-green);
+}
+
+@keyframes bootLineAppear {
+    0% {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        display: none;
+        height: 0;
+        padding: 0;
+    }
+}
+
+/* Messages */
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: rgba(0, 255, 255, 0.05);
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: var(--primary-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.message {
+    display: flex;
+    gap: 1rem;
+    animation: messageSlide 0.3s ease-out;
+}
+
+@keyframes messageSlide {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.message.user .message-avatar {
+    background: linear-gradient(135deg, var(--primary-cyan), var(--secondary-magenta));
+    box-shadow: var(--glow-magenta);
+    color: var(--bg-dark);
+}
+
+.message.assistant .message-avatar {
+    background: linear-gradient(135deg, var(--accent-yellow), var(--terminal-green));
+    box-shadow: 0 0 15px var(--terminal-green);
+    color: var(--bg-dark);
+}
+
+.message-content {
+    flex: 1;
+    padding: 1rem;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+
+.message.user .message-content {
+    background: rgba(0, 255, 255, 0.1);
+    border-left: 3px solid var(--primary-cyan);
+    color: var(--text-primary);
+}
+
+.message.assistant .message-content {
+    background: rgba(255, 255, 0, 0.05);
+    border-left: 3px solid var(--accent-yellow);
+    color: var(--text-primary);
+}
+
+.message.error .message-content {
+    background: rgba(255, 0, 85, 0.1);
+    border-left: 3px solid var(--error-red);
+    color: var(--error-red);
+}
+
+.typing-indicator {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-yellow);
+    border-radius: 50%;
+    animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Input Section */
+.input-section {
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid var(--primary-cyan);
+    display: flex;
+    gap: 1rem;
+}
+
+.input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid var(--primary-cyan);
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.input-wrapper:focus-within {
+    box-shadow: var(--glow-cyan);
+    border-color: var(--secondary-magenta);
+}
+
+.prompt-symbol {
+    color: var(--primary-cyan);
+    font-weight: bold;
+    text-shadow: var(--glow-cyan);
+}
+
+.message-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: 'Azeret Mono', monospace;
+    font-size: 1rem;
+}
+
+.message-input::placeholder {
+    color: var(--text-dim);
+}
+
+.send-button {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary-cyan), var(--secondary-magenta));
+    border: none;
+    padding: 0.75rem 2rem;
+    color: var(--bg-dark);
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.send-button:hover {
+    box-shadow: var(--glow-magenta);
+    transform: translateY(-2px);
+}
+
+.send-button:active {
+    transform: translateY(0);
+}
+
+.button-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: buttonShine 3s linear infinite;
+}
+
+@keyframes buttonShine {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+}
+
+/* Footer */
+.terminal-footer {
+    padding: 0.75rem 1.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border-top: 1px solid var(--primary-cyan);
+}
+
+.footer-stats {
+    display: flex;
+    gap: 2rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.stat span {
+    color: var(--primary-cyan);
+    font-weight: 600;
+}
+
+/* Config Panel */
+.config-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: min(500px, 90vw);
+    background: linear-gradient(135deg, rgba(10, 10, 15, 0.98), rgba(30, 10, 40, 0.98));
+    border: 2px solid var(--secondary-magenta);
+    box-shadow: var(--glow-magenta), 0 0 50px rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(20px);
+}
+
+.config-panel.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.config-header {
+    padding: 1rem 1.5rem;
+    background: rgba(255, 0, 255, 0.1);
+    border-bottom: 1px solid var(--secondary-magenta);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    color: var(--secondary-magenta);
+}
+
+.config-close {
+    background: none;
+    border: none;
+    color: var(--secondary-magenta);
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.3s ease;
+}
+
+.config-close:hover {
+    transform: rotate(90deg);
+    text-shadow: var(--glow-magenta);
+}
+
+.config-body {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.config-body label {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin-bottom: -0.5rem;
+}
+
+.config-body input {
+    background: rgba(255, 0, 255, 0.05);
+    border: 1px solid var(--secondary-magenta);
+    padding: 0.75rem;
+    color: var(--text-primary);
+    font-family: 'Azeret Mono', monospace;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.config-body input:focus {
+    box-shadow: var(--glow-magenta);
+}
+
+.config-save {
+    margin-top: 1rem;
+    background: linear-gradient(135deg, var(--secondary-magenta), var(--primary-cyan));
+    border: none;
+    padding: 1rem;
+    color: var(--bg-dark);
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.config-save:hover {
+    box-shadow: var(--glow-magenta);
+    transform: translateY(-2px);
+}
+
+/* Settings Toggle */
+.settings-toggle {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--secondary-magenta), var(--primary-cyan));
+    border: 2px solid var(--primary-cyan);
+    border-radius: 50%;
+    color: var(--bg-dark);
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: var(--glow-cyan);
+    z-index: 9997;
+    transition: all 0.3s ease;
+    animation: float 3s ease-in-out infinite;
+}
+
+.settings-toggle:hover {
+    transform: scale(1.1) rotate(90deg);
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .terminal-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .footer-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .input-section {
+        flex-direction: column;
+    }
+
+    .system-name {
+        font-size: 1rem;
+    }
+}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEURAL LINK v2.047</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="crt-effect"></div>
+
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="header-left">
+                <div class="status-indicator"></div>
+                <span class="system-name">NEURAL LINK</span>
+                <span class="version">v2.047</span>
+            </div>
+            <div class="header-right">
+                <div class="connection-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">STANDBY</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-body">
+            <div class="boot-sequence" id="bootSequence">
+                <div class="boot-line" style="animation-delay: 0s;">&gt; INITIALIZING QUANTUM CORE...</div>
+                <div class="boot-line" style="animation-delay: 0.3s;">&gt; ESTABLISHING NEURAL LINK...</div>
+                <div class="boot-line" style="animation-delay: 0.6s;">&gt; SYNCHRONIZING AI MATRIX...</div>
+                <div class="boot-line boot-success" style="animation-delay: 0.9s;">&gt; SYSTEM READY</div>
+            </div>
+
+            <div class="messages-container" id="messagesContainer"></div>
+
+            <div class="input-section">
+                <div class="input-wrapper">
+                    <span class="prompt-symbol">&gt;</span>
+                    <input type="text" id="messageInput" class="message-input" placeholder="ENTER COMMAND..." autocomplete="off">
+                </div>
+                <button id="sendButton" class="send-button">
+                    <span class="button-text">TRANSMIT</span>
+                    <span class="button-glow"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="terminal-footer">
+            <div class="footer-stats">
+                <span class="stat">LATENCY: <span id="latency">0ms</span></span>
+                <span class="stat">TOKENS: <span id="tokens">0</span></span>
+                <span class="stat">UPTIME: <span id="uptime">00:00</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-panel" id="configPanel">
+        <div class="config-header">
+            <span>API CONFIGURATION</span>
+            <button class="config-close" id="configClose">×</button>
+        </div>
+        <div class="config-body">
+            <label for="apiKey">OpenAI API Key</label>
+            <input type="password" id="apiKey" placeholder="sk-...">
+
+            <label for="apiEndpoint">API Endpoint (Optional)</label>
+            <input type="text" id="apiEndpoint" placeholder="https://api.openai.com/v1/chat/completions">
+
+            <button class="config-save" id="configSave">SAVE CONFIG</button>
+        </div>
+    </div>
+
+    <button class="settings-toggle" id="settingsToggle">
+        <span>⚙</span>
+    </button>
+
+    <script src="script.js"></script>
+</body>
+</html>
