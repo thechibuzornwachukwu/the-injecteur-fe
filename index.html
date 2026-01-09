@@ -39,14 +39,21 @@
             <div class="messages-container" id="messagesContainer"></div>
 
             <div class="input-section">
-                <div class="input-wrapper">
-                    <span class="prompt-symbol">&gt;</span>
-                    <input type="text" id="messageInput" class="message-input" placeholder="ENTER COMMAND..." autocomplete="off">
+                <input type="file" id="fileInput" accept="image/*,application/pdf,text/*" multiple hidden>
+                <div id="attachmentPreview" class="attachment-preview"></div>
+                <div class="input-controls">
+                    <button id="attachButton" class="attach-button" title="Attach files or images">
+                        <span class="attach-icon">📎</span>
+                    </button>
+                    <div class="input-wrapper">
+                        <span class="prompt-symbol">&gt;</span>
+                        <input type="text" id="messageInput" class="message-input" placeholder="ENTER COMMAND..." autocomplete="off">
+                    </div>
+                    <button id="sendButton" class="send-button">
+                        <span class="button-text">TRANSMIT</span>
+                        <span class="button-glow"></span>
+                    </button>
                 </div>
-                <button id="sendButton" class="send-button">
-                    <span class="button-text">TRANSMIT</span>
-                    <span class="button-glow"></span>
-                </button>
             </div>
         </div>
 
@@ -67,6 +74,14 @@
         <div class="config-body">
             <label for="apiKey">OpenAI API Key</label>
             <input type="password" id="apiKey" placeholder="sk-...">
+
+            <label for="modelSelect">Model</label>
+            <select id="modelSelect" class="model-select">
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="gpt-4o">GPT-4o (Vision Support)</option>
+            </select>
 
             <label for="apiEndpoint">API Endpoint (Optional)</label>
             <input type="text" id="apiEndpoint" placeholder="https://api.openai.com/v1/chat/completions">

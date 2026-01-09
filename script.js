@@ -6,13 +6,14 @@ const CHAT_HISTORY_KEY = 'neurallink_history';
 let config = {
     apiKey: '',
     apiEndpoint: 'https://api.openai.com/v1/chat/completions',
-    model: 'gpt-3'
+    model: 'gpt-3.5-turbo'
 };
 
 let chatHistory = [];
 let isProcessing = false;
 let startTime = Date.now();
 let tokenCount = 0;
+let attachedFiles = [];
 
 // DOM Elements
 const elements = {
@@ -25,12 +26,16 @@ const elements = {
     configSave: document.getElementById('configSave'),
     apiKeyInput: document.getElementById('apiKey'),
     apiEndpointInput: document.getElementById('apiEndpoint'),
+    modelSelect: document.getElementById('modelSelect'),
     statusText: document.querySelector('.status-text'),
     statusDot: document.querySelector('.status-dot'),
     latency: document.getElementById('latency'),
     tokens: document.getElementById('tokens'),
     uptime: document.getElementById('uptime'),
-    bootSequence: document.getElementById('bootSequence')
+    bootSequence: document.getElementById('bootSequence'),
+    attachButton: document.getElementById('attachButton'),
+    fileInput: document.getElementById('fileInput'),
+    attachmentPreview: document.getElementById('attachmentPreview')
 };
 
 // Initialize
@@ -60,6 +65,7 @@ function loadConfig() {
         config = { ...config, ...JSON.parse(saved) };
         elements.apiKeyInput.value = config.apiKey;
         elements.apiEndpointInput.value = config.apiEndpoint;
+        elements.modelSelect.value = config.model;
         updateConnectionStatus();
     }
 }
@@ -67,6 +73,7 @@ function loadConfig() {
 function saveConfig() {
     config.apiKey = elements.apiKeyInput.value.trim();
     config.apiEndpoint = elements.apiEndpointInput.value.trim() || 'https://api.openai.com/v1/chat/completions';
+    config.model = elements.modelSelect.value;
 
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
     updateConnectionStatus();
@@ -122,6 +129,13 @@ function setupEventListeners() {
 
     elements.configSave.addEventListener('click', saveConfig);
 
+    // File attachment
+    elements.attachButton.addEventListener('click', () => {
+        elements.fileInput.click();
+    });
+
+    elements.fileInput.addEventListener('change', handleFileSelect);
+
     // Close config panel on Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && elements.configPanel.classList.contains('active')) {
@@ -130,12 +144,90 @@ function setupEventListeners() {
     });
 }
 
+// File Handling
+async function handleFileSelect(event) {
+    const files = Array.from(event.target.files);
+
+    for (const file of files) {
+        if (file.size > 20 * 1024 * 1024) { // 20MB limit
+            showSystemMessage(`File ${file.name} is too large (max 20MB)`, 'error');
+            continue;
+        }
+
+        try {
+            const fileData = await readFileAsBase64(file);
+            attachedFiles.push({
+                name: file.name,
+                type: file.type,
+                data: fileData,
+                file: file
+            });
+            renderAttachmentPreview();
+        } catch (error) {
+            showSystemMessage(`Error reading file ${file.name}`, 'error');
+        }
+    }
+
+    // Clear input
+    elements.fileInput.value = '';
+}
+
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderAttachmentPreview() {
+    elements.attachmentPreview.innerHTML = '';
+
+    attachedFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'attachment-item';
+
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = `data:${file.type};base64,${file.data}`;
+            item.appendChild(img);
+        } else {
+            const icon = document.createElement('div');
+            icon.className = 'file-icon';
+            icon.textContent = '📄';
+            item.appendChild(icon);
+        }
+
+        const fileName = document.createElement('div');
+        fileName.className = 'file-name';
+        fileName.textContent = file.name;
+        item.appendChild(fileName);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'attachment-remove';
+        removeBtn.innerHTML = '×';
+        removeBtn.onclick = () => removeAttachment(index);
+        item.appendChild(removeBtn);
+
+        elements.attachmentPreview.appendChild(item);
+    });
+}
+
+function removeAttachment(index) {
+    attachedFiles.splice(index, 1);
+    renderAttachmentPreview();
+}
+
 // Message Handling
 async function handleSendMessage() {
     if (isProcessing) return;
 
     const message = elements.messageInput.value.trim();
-    if (!message) return;
+    if (!message && attachedFiles.length === 0) return;
 
     if (!config.apiKey) {
         showSystemMessage('Please configure your API key first', 'error');
@@ -143,10 +235,20 @@ async function handleSendMessage() {
         return;
     }
 
-    // Clear input and add user message
+    // Prepare message with attachments
+    const currentAttachments = [...attachedFiles];
+    const messageText = message || '(File attached)';
+
+    // Clear input and attachments
     elements.messageInput.value = '';
-    appendMessage('user', message);
-    chatHistory.push({ role: 'user', content: message });
+    attachedFiles = [];
+    renderAttachmentPreview();
+
+    // Add user message
+    appendMessage('user', messageText, currentAttachments);
+
+    // Store in history (simplified for now)
+    chatHistory.push({ role: 'user', content: messageText });
     saveChatHistory();
 
     // Set processing state
@@ -158,7 +260,7 @@ async function handleSendMessage() {
 
     try {
         const startTime = Date.now();
-        const response = await sendToOpenAI(message);
+        const response = await sendToOpenAI(messageText, currentAttachments);
         const latency = Date.now() - startTime;
 
         // Remove typing indicator
@@ -184,12 +286,50 @@ async function handleSendMessage() {
     }
 }
 
-async function sendToOpenAI(message) {
+async function sendToOpenAI(message, attachments = []) {
+    // Build message content
+    let userMessage;
+
+    if (attachments.length > 0 && supportsVision()) {
+        // Vision API format with images
+        const content = [];
+
+        if (message) {
+            content.push({
+                type: 'text',
+                text: message
+            });
+        }
+
+        for (const file of attachments) {
+            if (file.type.startsWith('image/')) {
+                content.push({
+                    type: 'image_url',
+                    image_url: {
+                        url: `data:${file.type};base64,${file.data}`
+                    }
+                });
+            } else {
+                // For non-image files, include as text description
+                content.push({
+                    type: 'text',
+                    text: `[Attached file: ${file.name}]`
+                });
+            }
+        }
+
+        userMessage = { role: 'user', content };
+    } else {
+        // Standard text format
+        userMessage = { role: 'user', content: message };
+    }
+
     const requestBody = {
         model: config.model,
         messages: [
             { role: 'system', content: 'You are a helpful AI assistant in a cyberpunk neural interface.' },
-            ...chatHistory.slice(-10) // Last 10 messages for context
+            ...chatHistory.slice(-10).map(msg => ({ role: msg.role, content: msg.content })),
+            userMessage
         ],
         temperature: 0.7,
         max_tokens: 1000
@@ -216,8 +356,14 @@ async function sendToOpenAI(message) {
     };
 }
 
+function supportsVision() {
+    // Models that support vision
+    const visionModels = ['gpt-4o', 'gpt-4-turbo', 'gpt-4-vision-preview'];
+    return visionModels.some(model => config.model.includes(model));
+}
+
 // UI Updates
-function appendMessage(role, content, scroll = true) {
+function appendMessage(role, content, attachments = [], scroll = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
 
@@ -225,12 +371,54 @@ function appendMessage(role, content, scroll = true) {
     avatar.className = 'message-avatar';
     avatar.textContent = role === 'user' ? 'U' : 'AI';
 
+    const contentWrapper = document.createElement('div');
+    contentWrapper.style.flex = '1';
+
+    // Show attachments if any
+    if (attachments && attachments.length > 0) {
+        const attachmentContainer = document.createElement('div');
+        attachmentContainer.style.display = 'flex';
+        attachmentContainer.style.gap = '0.5rem';
+        attachmentContainer.style.flexWrap = 'wrap';
+        attachmentContainer.style.marginBottom = '0.5rem';
+
+        attachments.forEach(file => {
+            const thumb = document.createElement('div');
+            thumb.style.width = '60px';
+            thumb.style.height = '60px';
+            thumb.style.border = '1px solid var(--primary-cyan)';
+            thumb.style.overflow = 'hidden';
+            thumb.style.display = 'flex';
+            thumb.style.alignItems = 'center';
+            thumb.style.justifyContent = 'center';
+            thumb.style.background = 'rgba(0, 255, 255, 0.05)';
+
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = `data:${file.type};base64,${file.data}`;
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                img.style.objectFit = 'cover';
+                thumb.appendChild(img);
+            } else {
+                thumb.textContent = '📄';
+                thumb.style.fontSize = '1.5rem';
+            }
+
+            attachmentContainer.appendChild(thumb);
+        });
+
+        contentWrapper.appendChild(attachmentContainer);
+    }
+
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     contentDiv.textContent = content;
 
+    contentWrapper.appendChild(contentDiv);
+
     messageDiv.appendChild(avatar);
-    messageDiv.appendChild(contentDiv);
+    messageDiv.appendChild(contentWrapper);
     elements.messagesContainer.appendChild(messageDiv);
 
     if (scroll) {
