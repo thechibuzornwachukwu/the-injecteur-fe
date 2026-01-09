@@ -25,8 +25,8 @@ const elements = {
     configClose: document.getElementById('configClose'),
     configSave: document.getElementById('configSave'),
     apiKeyInput: document.getElementById('apiKey'),
-    apiEndpointInput: document.getElementById('apiEndpoint'),
     modelSelect: document.getElementById('modelSelect'),
+    apiEndpointInput: document.getElementById('apiEndpoint'),
     statusText: document.querySelector('.status-text'),
     statusDot: document.querySelector('.status-dot'),
     latency: document.getElementById('latency'),
@@ -63,17 +63,37 @@ function loadConfig() {
     const saved = localStorage.getItem(CONFIG_KEY);
     if (saved) {
         config = { ...config, ...JSON.parse(saved) };
+        
+        // Fix invalid models
+        const validModels = ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo', 'gpt-3.5-turbo-instruct'];
+        const isValidModel = validModels.some(valid => config.model.toLowerCase().includes(valid.toLowerCase()));
+        
+        if (!isValidModel) {
+            config.model = 'gpt-3.5-turbo'; // Reset to valid default
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+        }
+        
         elements.apiKeyInput.value = config.apiKey;
-        elements.apiEndpointInput.value = config.apiEndpoint;
         elements.modelSelect.value = config.model;
+        elements.apiEndpointInput.value = config.apiEndpoint;
         updateConnectionStatus();
     }
 }
 
 function saveConfig() {
     config.apiKey = elements.apiKeyInput.value.trim();
-    config.apiEndpoint = elements.apiEndpointInput.value.trim() || 'https://api.openai.com/v1/chat/completions';
     config.model = elements.modelSelect.value;
+    config.apiEndpoint = elements.apiEndpointInput.value.trim() || 'https://api.openai.com/v1/chat/completions';
+
+    if (!config.apiKey) {
+        showSystemMessage('Please provide an API key', 'error');
+        return;
+    }
+
+    if (!config.model) {
+        showSystemMessage('Please specify a model (e.g., gpt-3.5-turbo, gpt-4)', 'error');
+        return;
+    }
 
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
     updateConnectionStatus();
